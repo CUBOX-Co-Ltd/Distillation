@@ -1,9 +1,15 @@
+import torch
+
 from lightning.fabric import Fabric
 from torch.utils.data import DataLoader
 from ultralytics import YOLO
 
-from .distil_common import KnowledgeDistiler 
-from .loss import KDLoss
+import importlib
+from tqdm import tqdm
+
+from .distil_common import KnowledgeDistiler
+from .util import preprocess_batch
+from .loss import BasicDistillationLoss
 
 
 class YOLO11Distiler(KnowledgeDistiler):
@@ -11,24 +17,39 @@ class YOLO11Distiler(KnowledgeDistiler):
                  fabric,
                  config,
                  trainset,
-                 trainloader):
+                 trainloader=None):
         super().__init__(fabric, config, trainset, trainloader)
 
 
 
     def init_model(self, ):
-        self.teacher = YOLO().eval() 
-        self.student = YOLO()
+        """
+        YOLO 클래스 = ultralytics.models.yolo.model.YOLO
+        """
+        self.teacher = YOLO("yolo11n.pt").eval()
+        self.student = YOLO("yolo11n.pt")
+
+        # 파라미터 확인
+        # print("Parameters in YOLO object:", list(self.student.parameters()))
+        # print("Parameters in YOLO.model:", list(self.student.model.parameters()))
+        # for name, param in self.student.named_parameters():
+        #     print(f"{name}: requires_grad={param.requires_grad}")
         self.discriminator = None
 
         if self.cfg.distillation_loss_type:
-            self.distil_loss = KDLoss(self.cfg.temperature, self.cfg.alpha)
+            self.distil_loss = BasicDistillationLoss(self.cfg.temperature, self.cfg.alpha)
         else:
             pass
 
     def set_model_requires_grad(self, ):
         self.teacher.requires_grad_(False)
         self.teacher.eval()
+
+        if self.cfg.train_all_params:
+            for param in self.student.parameters():
+                param.requires_grad = True
+        else:
+            pass
 
     def init_optimizer(self,):
         # Optimizer class
@@ -79,7 +100,8 @@ class YOLO11Distiler(KnowledgeDistiler):
             self.disc_update_counter = 0
 
     def fabric_setup(self,):
-        self.student, self.optimizer = self.fabric.setup(self.student, self.optimizer)
+        self.student, self.optimizer = self.fabric.setup(self.student, self.student_optimizer)
+        self.teacher = self.fabric.setup(self.teacher)
         try:
             from torchinfo import summary
             model_stats = summary(self.student, (1,1,1,1), verbose=0)
@@ -89,22 +111,62 @@ class YOLO11Distiler(KnowledgeDistiler):
 
 
     def train_step(self, batch):
-        images, targets = batch['img'], batch['labels']
+        """
+        Args:
+            batch : dict
+                'im_file', 
+                'ori_shape', 
+                'resized_shape', 
+                'ratio_pad', 
+                'img', 
+                'cls', 
+                'bboxes', 
+                'batch_idx'
 
-        student_logits = student_model(images)
+        Model output:
+            student_output :'tuple'
+                Element 0: Tensor with shape torch.Size([16, 84, 8400])
+                Element 1: List with length 3
+                List Item 0: Tensor with shape torch.Size([16, 144, 80, 80])
+                List Item 1: Tensor with shape torch.Size([16, 144, 40, 40])
+                List Item 2: Tensor with shape torch.Size([16, 144, 20, 20])
+        """
+
+        batch = preprocess_batch(batch, self.device, self.weight_dtype)
+
+        student_output = self.student.model._predict_once(batch["img"])
+
+        # print("Student output analysis:")
+        # for idx, elem in enumerate(student_output):
+        #     if isinstance(elem, torch.Tensor):
+        #         print(f"Element {idx}: Tensor with shape {elem.shape}")
+        #     elif isinstance(elem, list):
+        #         print(f"Element {idx}: List with length {len(elem)}")
+        #         for i, item in enumerate(elem):
+        #             if isinstance(item, torch.Tensor):
+        #                 print(f"  List Item {i}: Tensor with shape {item.shape}")
+        #             else:
+        #                 print(f"  List Item {i}: {item} (type: {type(item)})")
+        #     else:
+        #         print(f"Element {idx}: {type(elem)}")
+
+
+        # print('loss', type(loss))
+        # print('loss_itesm', loss_item.keys())
+        # print('student_output', type(student_output))
+        # print('student_output', student_output)
 
         with torch.no_grad():
-            teacher_logits = teacher_model(images)
+            # loss_t, loss_items_t  = self.teacher(batch)
+            teacher_output = self.teacher.model._predict_once(batch["img"])
 
-
-        loss = self.distil_los(student_logits, teacher_logits, targets)
+        loss = self.distil_loss(student_output, teacher_output)
 
         return loss
 
     def train(self,):
         for epoch in range(10):
             self.fabric.print(f"Epoch {epoch + 1}")
-            self.student.train()
             total_loss = 0
 
             self.trainloader = tqdm(self.trainloader) if self.fabric.global_rank == 0 else self.trainloader

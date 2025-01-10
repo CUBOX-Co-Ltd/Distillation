@@ -20,13 +20,16 @@ class Config(BaseModel):
     pl_precision: _PRECISION_INPUT_STR | _PRECISION_INPUT_STR_ALIAS
 
     num_epochs: int
-    lr: float
+    student_lr: float
+    student_lr_scheduler: str
     trainset: TRAINSET
     batch_size: int
     dataloader_num_worker: int
 
 
     # distillation
-    distil_loss_type: str
+    distillation_loss_type: str
     temperature: float
     alpha: float
+
+    train_all_params: bool

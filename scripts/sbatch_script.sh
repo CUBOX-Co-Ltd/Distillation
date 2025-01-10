@@ -1,9 +1,8 @@
 #!/bin/bash -l
 
-
 #SBATCH --job-name=yolo-distill
 #SBATCH --time=999:00:00
-#SBATCH --nodelist=nv170
+#SBATCH --nodelist=hpe161
 ##SBATCH -p 80g
 #SBATCH --nodes=1             # This needs to match Trainer(num_nodes=...)
 #SBATCH --gres=gpu:1

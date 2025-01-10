@@ -52,24 +52,21 @@ if __name__ == '__main__':
     if config.trainset == 'smartphone':
         from ultralytics.data.dataset import YOLODataset
         data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/data/smartphone/smartphone.yaml'
-        data = check_det_dataset(data_yaml)
-
-        print(data)
-        print(type(data))
+        data = check_det_dataset(data_yaml) # yaml의 내용이 담긴 dict
         trainset = YOLODataset(
             data["train"],
-            data=data_yaml,
+            data=data,
             task="detect",
             imgsz=640,
             augment=False,
             batch_size=1,)
 
-
-        dataloader = build_dataloader(trainset, batch=16, workers=4, shuffle=True)
+        # build_dataloader를 쓰면 ultralytics.data.build.InfiniteDataLoader가 나온다
+        # trainloader = build_dataloader(trainset, batch=16, workers=4, shuffle=True)
 
     if args.mode == 'yolo11':
         from distiler import YOLO11Distiler
-        distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset, trainloader=trainloader)
+        distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
         distiler.train()
 
     if args.mode == 'test':

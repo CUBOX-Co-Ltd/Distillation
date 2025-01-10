@@ -1,1 +1,1 @@
-from .kdloss import KDLoss
+from .kdloss import BasicDistillationLoss

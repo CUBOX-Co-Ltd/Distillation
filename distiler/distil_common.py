@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+
 class KnowledgeDistiler:
     def __init__(
         self,
@@ -17,7 +20,7 @@ class KnowledgeDistiler:
         self.init_dataloader(trainset, trainloader)
         self.init_model_and_optimizer()
 
-    def init_weight_dtype(self, fabric):
+    def init_weight_dtype(self):
         precision_str = self.cfg.pl_precision
 
         if '16' in precision_str or 'transformer-engine' in precision_str:
@@ -34,7 +37,10 @@ class KnowledgeDistiler:
                 trainset, 
                 batch_size=self.cfg.batch_size, 
                 shuffle=True, 
-                num_workers=self.cfg.dataloader_num_worker)
+                num_workers=self.cfg.dataloader_num_worker,
+                collate_fn=getattr(trainset, "collate_fn", None),)
+
+        print('trainloader', type(trainloader))
         self.trainloader = self.fabric.setup_dataloaders(trainloader)
 
     def init_model_and_optimizer(self, ):

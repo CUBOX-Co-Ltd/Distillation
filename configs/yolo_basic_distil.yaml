@@ -7,11 +7,14 @@ pl_strategy: deepspeed_stage_3_offload
 pl_precision: bf16-mixed
 
 num_epochs: 100
-lr: 0.001
+student_lr: 0.001
+student_lr_scheduler: ExponentialLR
 trainset: smartphone
 batch_size: 16
 dataloader_num_worker: 16
 
-distil_loss_type: basic
+distillation_loss_type: basic
 temperature: 3.0
 alpha: 0.5
+
+train_all_params: true
