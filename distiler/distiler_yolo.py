@@ -7,12 +7,12 @@ from ultralytics import YOLO
 import importlib
 from tqdm import tqdm
 
-from .distil_common import KnowledgeDistiler
+from .distil_common import BaseDistiller
 from .util import preprocess_batch
 from .loss import BasicDistillationLoss
 
 
-class YOLO11Distiler(KnowledgeDistiler):
+class YOLO11Distiler(BaseDistiller):
     def __init__(self,
                  fabric,
                  config,
@@ -22,12 +22,9 @@ class YOLO11Distiler(KnowledgeDistiler):
 
 
 
-    def init_model(self, ):
-        """
-        YOLO 클래스 = ultralytics.models.yolo.model.YOLO
-        """
-        self.teacher = YOLO("yolo11n.pt").eval()
-        self.student = YOLO("yolo11n.pt")
+    def init_model(self, teacher, student):
+        self.teacher = teacher
+        self.student = student
 
         # 파라미터 확인
         # print("Parameters in YOLO object:", list(self.student.parameters()))
@@ -180,5 +177,5 @@ class YOLO11Distiler(KnowledgeDistiler):
 
                 total_loss += loss.item()
 
-        fabric.print(f"Epoch {epoch + 1} - Loss: {total_loss / len(train_loader)}")
+        self.fabric.print(f"Epoch {epoch + 1} - Loss: {total_loss / len(train_loader)}")
 

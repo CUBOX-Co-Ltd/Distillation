@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class KnowledgeDistiler:
+class BaseDistiller:
     def __init__(
         self,
         fabric,
