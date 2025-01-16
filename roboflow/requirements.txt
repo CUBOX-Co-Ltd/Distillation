@@ -1,0 +1,5 @@
+autodistill
+autodistill-grounded-sam
+autodistill-yolov8
+roboflow
+supervision==0.24.0

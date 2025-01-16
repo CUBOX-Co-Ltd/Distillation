@@ -1,10 +1,14 @@
 wandb_project_name: CustomFluxIDT2I
-wandb_run_name: yolo-distil
+wandb_run_name: yolo-respose-distil
 wandb_host: http://wandb.artfacestudio.com
 wandb_key: local-73177de041f41c769eb8cbdccb982a9a5406fab7
 
 pl_strategy: deepspeed_stage_3_offload
 pl_precision: bf16-mixed
+
+
+teacher_model: yolo11x
+student_model: yolo11n
 
 num_epochs: 100
 student_lr: 0.001

@@ -1,0 +1,33 @@
+wandb_project_name: CustomFluxIDT2I
+wandb_run_name: yolo-feature-distil
+wandb_host: http://wandb.artfacestudio.com
+wandb_key: local-73177de041f41c769eb8cbdccb982a9a5406fab7
+
+pl_strategy: deepspeed_stage_3_offload
+pl_precision: bf16-mixed
+
+
+teacher_model: yolo11x
+student_model: yolo11n
+
+# feature matching layers
+backbone_cbs: [0, 1, 2, 3, 4]
+backbone_sppf: false
+neck_cbs: [1,2]
+head_deep_cbs: [1, 2]
+head_mid_cbs: [1, 2]
+head_low_cbs: [1, 2]
+
+num_epochs: 5
+student_lr: 0.001
+student_lr_scheduler: ExponentialLR
+trainset: smartphone
+batch_size: 16
+dataloader_num_worker: 16
+
+distillation_loss_type: basic
+temperature: 3.0
+alpha: 0.5
+
+train_all_params: true
+projector_type: basic_conv

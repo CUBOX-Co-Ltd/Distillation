@@ -33,3 +33,5 @@ class Config(BaseModel):
     alpha: float
 
     train_all_params: bool
+
+    projector_type: str

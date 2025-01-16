@@ -7,6 +7,8 @@ class BaseDistiller:
         fabric,
         config,
         trainset,
+        teacher,
+        student,
         trainloader
     ):
         super().__init__()
@@ -15,6 +17,9 @@ class BaseDistiller:
         self.logger: WandbLogger = self.fabric.logger
 
         self.device = self.fabric.device
+
+        self.teacher = teacher
+        self.student = student
         self.init_weight_dtype()
 
         self.init_dataloader(trainset, trainloader)

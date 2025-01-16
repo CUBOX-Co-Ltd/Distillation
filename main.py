@@ -50,49 +50,28 @@ if __name__ == '__main__':
     fabric.launch()
 
 
-    from torchinfo import summary
-    from ultralytics import YOLO
+    if config.trainset == 'smartphone':
+        from ultralytics.data.dataset import YOLODataset
+        data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/data/smartphone/smartphone.yaml'
+        data = check_det_dataset(data_yaml) # yaml의 내용이 담긴 dict
+        trainset = YOLODataset(
+            data["train"],
+            data=data,
+            task="detect",
+            imgsz=640,
+            augment=False,
+            batch_size=1,)
 
-    # YOLO11n 및 YOLO11x 모델 로드
-    model_n = YOLO("yolo11n.pt")
-    model_x = YOLO("yolo11x.pt")
+        # build_dataloader를 쓰면 ultralytics.data.build.InfiniteDataLoader가 나온다
+        # trainloader = build_dataloader(trainset, batch=16, workers=4, shuffle=True)
 
-    # 요약 정보 출력
-    print("YOLO11n Summary:")
-    summary(model_n.model, input_size=(1, 3, 640, 640), verbose=1)
+    if args.mode == 'yolo11':
+        from distiler import YOLO11Distiler
+        teacher, student = get_yolo_models(f'{config.teacher_model}.pt', f'{config.student_model}.pt')
+        distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
+        distiler.train()
 
-    print("YOLO11x Summary:")
-    summary(model_x.model, input_size=(1, 3, 640, 640), verbose=1)
-
-    # YOLO11n ONNX 변환
-    onnx_path_n = model_n.export(format="onnx")
-    print(f"YOLO11n ONNX 모델 저장 경로: {onnx_path_n}")
-
-    # YOLO11x ONNX 변환
-    onnx_path_x = model_x.export(format="onnx")
-    print(f"YOLO11x ONNX 모델 저장 경로: {onnx_path_x}")
-
-    # if config.trainset == 'smartphone':
-    #     from ultralytics.data.dataset import YOLODataset
-    #     data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/data/smartphone/smartphone.yaml'
-    #     data = check_det_dataset(data_yaml) # yaml의 내용이 담긴 dict
-    #     trainset = YOLODataset(
-    #         data["train"],
-    #         data=data,
-    #         task="detect",
-    #         imgsz=640,
-    #         augment=False,
-    #         batch_size=1,)
-
-    #     # build_dataloader를 쓰면 ultralytics.data.build.InfiniteDataLoader가 나온다
-    #     # trainloader = build_dataloader(trainset, batch=16, workers=4, shuffle=True)
-
-    # if args.mode == 'yolo11':
-    #     from distiler import YOLO11Distiler
-    #     distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
-    #     distiler.train()
-
-    # if args.mode == 'test':
-    #     ...
+    if args.mode == 'test':
+        ...
 
 

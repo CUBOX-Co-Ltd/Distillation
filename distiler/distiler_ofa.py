@@ -18,9 +18,11 @@ class OFADistiler(BaseDistiller):
         fabric,
         config,
         trainset,
+        teacher,
+        student,
         trainloader=None
     ):
-        super().__init__(fabric, config, trainset, trainloader)
+        super().__init__(fabric, config, trainset, teacher, student, trainloader)
 
 
     def init_model(self, teacher, student):
@@ -29,3 +31,12 @@ class OFADistiler(BaseDistiller):
 
         for stage in 
 
+    def set_model_requires_grad(self, ):
+        self.teacher.requires_grad_(False)
+        self.teacher.eval()
+
+        if self.cfg.train_all_params:
+            for param in self.student.parameters():
+                param.requires_grad = True
+        else:
+            pass
