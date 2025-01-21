@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--nnodes', type=int, default=1)
     parser.add_argument('--ngpus', type=int, default=1)
     parser.add_argument('--mode', type=str, default='yolo11')
-    parser.add_argument('--config_path', type=str, default='configs/yolo_basic_distil.yaml')
+    parser.add_argument('--config_path', type=str, default='configs/yolo_feature_distil.yaml')
 
     args = parser.parse_args()
 
@@ -66,12 +66,21 @@ if __name__ == '__main__':
         # trainloader = build_dataloader(trainset, batch=16, workers=4, shuffle=True)
 
     if args.mode == 'yolo11':
-        from distiler import YOLO11Distiler
+        # from distiler import YOLO11Distiler
+        from distiller import get_yolo_models
         teacher, student = get_yolo_models(f'{config.teacher_model}.pt', f'{config.student_model}.pt')
-        distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
-        distiler.train()
+        # distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
+        # distiler.train()
 
-    if args.mode == 'test':
-        ...
+        print(type(teacher.model)) # ultralytics.nn.tasks.DetectionModel
+        print(teacher.model)
 
+        torch.randn(1, 3, 640, 640)
+    if args.mode == 'ssl_simclr_yolo11':
+        from distiller import get_yolo_model
+        from lightly.data import LightlyDataset
+        from trainer_ssl import SSLTrainer
 
+        yolo = get_yolo_model(f'{config.model}')
+        ssl_trainer = SSLTrainer(fabric=fabric, config=config, model=yolo)
+        ssl_trainer.train()

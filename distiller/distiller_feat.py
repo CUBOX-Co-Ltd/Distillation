@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 
 from lightning.fabric import Fabric
 from torch.utils.data import DataLoader
@@ -11,7 +12,7 @@ from .distil_common import BaseDistiller
 from .blocks import init_weights
 from .projector import projectors
 from .util import preprocess_batch
-from .loss import FeatureDistillationLoss
+# from .loss import FeatureDistillationLoss
 
 class Student_with_Proejctor(nn.Module):
     def __init__(self, config, teacher, student):
@@ -125,9 +126,10 @@ class Student_with_Proejctor(nn.Module):
 
 
     def forward(self, batch):
-        logits_student, feat_student = self.student.model.forward_features(batch["img"], True)
+        pass
+        # logits_student, feat_student = self.student.model.forward_features(batch["img"], True)
         
-        for stage in self.config.backbone_cbs:
+        # for stage in self.config.backbone_cbs:
             
 
 
@@ -227,7 +229,7 @@ class FeatuerDistiller(BaseDistiller):
             self.teacher.eval()
             teacher_output = self.teacher.model._predict_once(batch["img"])
 
-        loss = 
+        # loss = 
 
     def train(self,):
         for epoch in range(self.config.num_epochs):

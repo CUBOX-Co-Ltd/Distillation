@@ -22,4 +22,4 @@ srun --container-image $CONTAINER_IMAGE_PATH \
     --no-container-mount-home \
     --container-writable \
     --container-workdir $MY_WORKSPACE_PATH \
-    bash -c 'pip install torchinfo && python main.py --nnodes $SLURM_NNODES --ngpus $SLURM_NTASKS_PER_NODE --mode yolo11 --config_path configs/yolo_basic_distil.yaml'
+    bash -c 'pip install torchinfo && python main.py --nnodes $SLURM_NNODES --ngpus $SLURM_NTASKS_PER_NODE --mode yolo11 --config_path configs/yolo_feature_distil.yaml'

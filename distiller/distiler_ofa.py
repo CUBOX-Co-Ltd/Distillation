@@ -27,9 +27,7 @@ class OFADistiler(BaseDistiller):
 
     def init_model(self, teacher, student):
         self.aligner = nn.ModuleDict()
-
-
-        for stage in 
+        # for stage in 
 
     def set_model_requires_grad(self, ):
         self.teacher.requires_grad_(False)
