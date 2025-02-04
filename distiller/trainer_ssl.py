@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 
+from ultralytics.data.utils import check_cls_dataset, check_det_dataset
+from ultralytics.data.dataset import YOLODataset
+
 from lightly.loss import NTXentLoss
 from lightly.transforms import SimCLRTransform
 from lightly.models.modules import SimCLRProjectionHead
@@ -13,6 +16,7 @@ class SimCLRTrainer:
         fabric,
         config,
         model,
+        trainset=None
     ):
         super().__init__()
         self.fabric = fabric
@@ -24,7 +28,7 @@ class SimCLRTrainer:
         self.model = model
         self.init_weight_dtype()
 
-        self.init_dataloader()
+        self.init_dataloader(trainset)
         self.init_model_and_optimizer()
 
     def init_weight_dtype(self):
@@ -38,16 +42,29 @@ class SimCLRTrainer:
         else:
             self.weight_dtype = torch.float32
 
-    def init_dataloader(self):
-        transform = SimCLRTransform(input_size=input_size)
+    def init_dataloader(self, trainset):
+        transform = SimCLRTransform(input_size=self.cfg.input_size)
 
-        if config.trainset == 'vocdet':
+        if self.cfg.trainset == 'vocdet':
             trainset = torchvision.datasets.VOCDetection(
                 "datasets/pascal_voc",
                 download=True,
                 transform=transform,
                 target_transform=target_transform,
             )
+        elif self.cfg.trainset == 'coco':
+            data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/datasets/coco.yaml'
+            data = check_det_dataset(data_yaml)
+            trainset = YOLODataset(
+                data["train"],
+                data=data,
+                task="detect",
+                imgsz=640,
+                augment=False,
+                batch_size=1,
+            )
+        elif trainset is not None:
+            trainset = trainset
         else:
             trainset = None
 
@@ -67,7 +84,7 @@ class SimCLRTrainer:
         self.fabric_setup()
 
     def init_model(self, ):
-        num_feats, self.backbone = setup_backbone(self.model)     
+        num_feats, self.backbone = self.setup_backbone(self.model)     
         self.projection_head = SimCLRProjectionHead(
             input_dim=num_feats,
             hidden_dim=num_feats,
@@ -76,6 +93,13 @@ class SimCLRTrainer:
         
         self.criterion = NTXentLoss(gather_distributed=True)
 
+    def setup_backbone(self, model):
+        backbone = self.model.backbone
+        with torch.no_grad():
+            out = backbone(torch.randn(1,3,640,640))
+            print('out', out.shape)
+
+        return out.shape[-1], backbone
 
     def set_model_requires_grad(self, ):
         pass
@@ -83,7 +107,7 @@ class SimCLRTrainer:
     def init_optimizer(self,):
         self.optimizer = torch.optim.SGD(
             [self.backbone.parameters()]+[self.projection_head.parameters()], 
-            lr=default(self.config.lr, 0.06)
+            lr=default(self.cfg.lr, 0.06)
         )
 
     def fabric_setup(self,):
@@ -97,7 +121,7 @@ class SimCLRTrainer:
         return loss
 
     def train(self,):
-        for epoch in range(self.config.num_epochs):
+        for epoch in range(self.cfg.num_epochs):
             self.fabric.print(f"Epoch {epoch + 1}")
             total_loss = 0
 
@@ -150,7 +174,7 @@ class DINOTrainer:
         def target_transform(t):
             return 0
 
-        if config.trainset == 'vocdet':
+        if self.cfg.trainset == 'vocdet':
             trainset = torchvision.datasets.VOCDetection(
                 "datasets/pascal_voc",
                 download=True,
@@ -176,6 +200,7 @@ class DINOTrainer:
         self.fabric_setup() 
 
     def init_model(self, ):
-        
+        ...
 
     def train_step(self, batch):
+        ...

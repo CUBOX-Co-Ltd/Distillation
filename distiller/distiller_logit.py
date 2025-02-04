@@ -12,13 +12,15 @@ from .util import preprocess_batch
 from .loss import BasicDistillationLoss
 
 
-class YOLO11Distiler(BaseDistiller):
+class LogitDistiler(BaseDistiller):
     def __init__(self,
                  fabric,
                  config,
                  trainset,
+                 teacher,
+                 student,
                  trainloader=None):
-        super().__init__(fabric, config, trainset, trainloader)
+        super().__init__(fabric, config, trainset, teacher, student, trainloader)
 
 
 

@@ -132,6 +132,28 @@ class Student_with_Proejctor(nn.Module):
         # for stage in self.config.backbone_cbs:
             
 
+class CWDLoss(nn.Module):
+    def __init__(self, tau):
+        self.tau = tau
+    
+    def forward(self, feats_s, feats_t):
+        assert len(feat_s) == len(feat_t)
+        losses = []
+
+        for idx, feat_s, feat_t in enumerate(zip(feats_s, feats_t)):
+            assert feat_s == feat_t
+            N, C, H, W = feat_s.shape
+
+            softmax_pred_t = F.softmax(feat.view(-1, H*W) / self.tau, dim=1) # 픽셀별로 확률값으로 변환
+
+            logsoftmax = torch.nn.LogSoftmax(dim=1)
+            cost = torch.sum(
+                softmax_pred_T * logsoftmax(t.view(-1, W * H) / self.tau) -
+                softmax_pred_T * logsoftmax(s.view(-1, W * H) / self.tau)) * (self.tau ** 2)
+
+            losses.append(cost / (C * N))
+
+        return sum(losses)
 
 
 
@@ -225,10 +247,12 @@ class FeatuerDistiller(BaseDistiller):
 
         student_output = self.student(batch)
 
+        student_feats = self.student.model.extracted_features
         with torch.no_grad():
             self.teacher.eval()
             teacher_output = self.teacher.model._predict_once(batch["img"])
 
+            teacher_feats = self.teacher.model.extracted_features
         # loss = 
 
     def train(self,):

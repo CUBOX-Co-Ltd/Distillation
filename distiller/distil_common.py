@@ -17,13 +17,10 @@ class BaseDistiller:
         self.logger: WandbLogger = self.fabric.logger
 
         self.device = self.fabric.device
-
-        self.teacher = teacher
-        self.student = student
         self.init_weight_dtype()
 
         self.init_dataloader(trainset, trainloader)
-        self.init_model_and_optimizer()
+        self.init_model_and_optimizer(teacher, student)
 
     def init_weight_dtype(self):
         precision_str = self.cfg.pl_precision
@@ -54,8 +51,9 @@ class BaseDistiller:
         self.init_optimizer()
         self.fabric_setup()
 
-    def init_model(self, ):
-        pass
+    def init_model(self, teacher, student):
+        self.teacher = teacher
+        self.student = student
     
     def set_model_requires_grad(self, ):
         pass

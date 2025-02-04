@@ -143,12 +143,16 @@ class BaseModel(nn.Module):
             (torch.Tensor): The last output of the model.
         """
         y, dt, embeddings = [], [], []  # outputs
-        for m in self.model:
+        for m_idx, m in enumerate(self.model):
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             x = m(x)  # run
+            if isinstance(x, tuple):
+                print(m_idx, type(m))
+            else:
+                print(m_idx, type(m), x.shape)
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
@@ -389,7 +393,7 @@ class DetectionModel(BaseModel):
         return E2EDetectLoss(self) if getattr(self, "end2end", False) else v8DetectionLoss(self)
 
 
-class DetectionModel2(DetectionModel):
+class DetectionModel2(BaseModel):
     def __init__(self, cfg="yolov8n.yaml", ch=3, nc=None, verbose=True):  # model, input channels, number of classes
         """Initialize the YOLOv8 detection model with the given config and parameters."""
         super().__init__()
@@ -403,6 +407,7 @@ class DetectionModel2(DetectionModel):
 
         # Define model
         ch = self.yaml["ch"] = self.yaml.get("ch", ch)  # input channels
+        print('316 ch', ch)
         if nc and nc != self.yaml["nc"]:
             LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml["nc"] = nc  # override YAML value
@@ -420,11 +425,21 @@ class DetectionModel2(DetectionModel):
             def _forward(x):
                 """Performs a forward pass through the model, handling different Detect subclass types accordingly."""
                 if self.end2end:
+                    print('423', self.end2end)
                     return self.forward(x)["one2many"]
-                return self.forward(x)[0] if isinstance(m, (Segment, Pose, OBB)) else self.forward(x)
+                if isinstance(m, (Segment, Pose, OBB)):
+                    return self.forward(x)[0]
+                else:
+                    print('428', 'forward')
+                    self.forward(x)
+                # return self.forward(x)[0] if isinstance(m, (Segment, Pose, OBB)) else self.forward(x)
 
-            m.stride = torch.tensor([s / x.shape[-2] for x in _forward(torch.zeros(1, ch, s, s))])  # forward
+            # m.stride = torch.tensor([s / x.shape[-2] for x in _forward(torch.zeros(1, ch, s, s))])  # forward
+            # hard coding
+            m.stride = torch.tensor([8., 16., 32.])
             self.stride = m.stride
+            print('self.stride', self.stride)
+            print('self.stride', self.stride.shape)
             m.bias_init()  # only run once
         else:
             self.stride = torch.Tensor([32])  # default stride for i.e. RTDETR
@@ -435,8 +450,12 @@ class DetectionModel2(DetectionModel):
             self.info()
             LOGGER.info("")
 
+        self.extracted_features = {} # To store features from specified layers
 
-    def _predict_once(self, x, return_feat=True, profile=False, visualize=False, embed=None):
+    def __repr__(self):
+        return f"DetectionModel2(\n  (model): {self.model.__repr__()}\n)"
+
+    def _predict_once(self, x, profile=False, visualize=False, embed=None, feature_layers=None):
         """
         Perform a forward pass through the network.
 
@@ -449,24 +468,81 @@ class DetectionModel2(DetectionModel):
         Returns:
             (torch.Tensor): The last output of the model.
         """
+        print('459', x.shape)
         y, dt, embeddings = [], [], []  # outputs
-        for m in self.model:
+        class_counts = {}  # To track the occurrence of each layer class
+        for m_idx,m in enumerate(self.model):
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             x = m(x)  # run
-            y.append(x if m.i in self.save else None)  # save output
-            if visualize:
-                feature_visualization(x, m.type, m.i, save_dir=visualize)
-            if embed and m.i in embed:
-                embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
-                if m.i == max(embed):
-                    return torch.unbind(torch.cat(embeddings, 1), dim=0)
+            if isinstance(x, tuple):
+                print(m_idx, type(m))
+            else:
+                print(m_idx, type(m), x.shape)
+            # Save intermediate features if the layer matches the feature_layers criteria
+            # layer_class = type(m)
+            # class_counts[layer_class] = class_counts.get(layer_class, 0) + 1
 
-            if return_feat:
+            # if feature_layers and layer_class in feature_layers:
+            #     target_indices = feature_layers[layer_class]
+            #     if class_counts[layer_class] in target_indices:
+            #         self.extracted_features[(layer_class, class_counts[layer_class])] = x
+
+
+            # y.append(x if m.i in self.save else None)  # save output
+            # if visualize:
+            #     feature_visualization(x, m.type, m.i, save_dir=visualize)
+            # if embed and m.i in embed:
+            #     embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
+            #     if m.i == max(embed):
+            #         return torch.unbind(torch.cat(embeddings, 1), dim=0)
                 
         return x
+
+    def _predict_augment(self, x):
+        """Perform augmentations on input image x and return augmented inference and train outputs."""
+        if getattr(self, "end2end", False) or self.__class__.__name__ != "DetectionModel":
+            LOGGER.warning("WARNING ⚠️ Model does not support 'augment=True', reverting to single-scale prediction.")
+            return self._predict_once(x)
+        img_size = x.shape[-2:]  # height, width
+        s = [1, 0.83, 0.67]  # scales
+        f = [None, 3, None]  # flips (2-ud, 3-lr)
+        y = []  # outputs
+        for si, fi in zip(s, f):
+            xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
+            yi = super().predict(xi)[0]  # forward
+            yi = self._descale_pred(yi, fi, si, img_size)
+            y.append(yi)
+        y = self._clip_augmented(y)  # clip augmented tails
+        return torch.cat(y, -1), None  # augmented inference, train
+
+    @staticmethod
+    def _descale_pred(p, flips, scale, img_size, dim=1):
+        """De-scale predictions following augmented inference (inverse operation)."""
+        p[:, :4] /= scale  # de-scale
+        x, y, wh, cls = p.split((1, 1, 2, p.shape[dim] - 4), dim)
+        if flips == 2:
+            y = img_size[0] - y  # de-flip ud
+        elif flips == 3:
+            x = img_size[1] - x  # de-flip lr
+        return torch.cat((x, y, wh, cls), dim)
+
+    def _clip_augmented(self, y):
+        """Clip YOLO augmented inference tails."""
+        nl = self.model[-1].nl  # number of detection layers (P3-P5)
+        g = sum(4**x for x in range(nl))  # grid points
+        e = 1  # exclude layer count
+        i = (y[0].shape[-1] // g) * sum(4**x for x in range(e))  # indices
+        y[0] = y[0][..., :-i]  # large
+        i = (y[-1].shape[-1] // g) * sum(4 ** (nl - 1 - x) for x in range(e))  # indices
+        y[-1] = y[-1][..., i:]  # small
+        return y
+
+    def init_criterion(self):
+        """Initialize the loss criterion for the DetectionModel."""
+        return E2EDetectLoss(self) if getattr(self, "end2end", False) else v8DetectionLoss(self)
 
 class OBBModel(DetectionModel):
     """YOLOv8 Oriented Bounding Box (OBB) model."""
@@ -1180,7 +1256,7 @@ def parse_model_seperate(d, ch, verbose=True):  # model_dict, input_channels(3)
         LOGGER.info(f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
     ch = [ch]
     layers_backbone, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
-    for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
+    for i, (f, n, m, args) in enumerate(d["backbone"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]  # get module
         for j, a in enumerate(args):
             if isinstance(a, str):
@@ -1411,12 +1487,12 @@ def parse_model_seperate(d, ch, verbose=True):  # model_dict, input_channels(3)
             LOGGER.info(f"{i:>3}{str(f):>20}{n_:>3}{m_.np:10.0f}  {t:<45}{str(args):<30}")  # print
         save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  # append to savelist
         layers_head.append(m_)
-        if i == 0:
-            ch = []
+        # if i == 0:
+        #     ch = []
         ch.append(c2)
 
 
-    return nn.Sequential(*(layers_backbone+layers_head)), nn.Sequential(*layers_backbone), nn.Sequential(*layers_head), sorted(save)
+    return nn.Sequential(*(layers_backbone+layers_head)), nn.ModuleList(layers_backbone), nn.ModuleList(layers_head), sorted(save)
 
 def yaml_model_load(path):
     """Load a YOLOv8 model from a YAML file."""

@@ -57,3 +57,5 @@ class SSLConfig(BaseModel):
     trainset: str
     batch_size: int
     dataloader_num_worker: int
+
+    input_size: int

@@ -141,6 +141,7 @@ class Model(nn.Module):
 
         # Load or create new YOLO model
         if Path(model).suffix in {".yaml", ".yml"}:
+            print('144', task)
             self._new(model, task=task, verbose=verbose)
         else:
             self._load(model, task=task)
@@ -252,6 +253,7 @@ class Model(nn.Module):
         cfg_dict = yaml_model_load(cfg)
         self.cfg = cfg
         self.task = task or guess_model_task(cfg_dict)
+        print('256', model) # None
         self.model = (model or self._smart_load("model"))(cfg_dict, verbose=verbose and RANK == -1)  # build model
         self.overrides["model"] = self.cfg
         self.overrides["task"] = self.task
@@ -1091,7 +1093,10 @@ class Model(nn.Module):
             - This method is typically used internally by other methods of the Model class.
             - The task_map attribute should be properly initialized with the correct mappings for each task.
         """
+        print('1096', key)
+        print('self.task_map', self.task_map)
         try:
+            print(str(self.task_map[self.task][key]))
             return self.task_map[self.task][key]
         except Exception as e:
             name = self.__class__.__name__

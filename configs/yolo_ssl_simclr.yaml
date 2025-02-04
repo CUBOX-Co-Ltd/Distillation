@@ -1,16 +1,17 @@
 wandb_project_name: CustomFluxIDT2I
-wandb_run_name: yolo-feature-distil
+wandb_run_name: yolo-ssl-simclr
 wandb_host: http://wandb.artfacestudio.com
 wandb_key: local-73177de041f41c769eb8cbdccb982a9a5406fab7
 
 pl_strategy: deepspeed_stage_3_offload
 pl_precision: bf16-mixed
 
-model: yolo11n
+model: yolo11n.pt
 ssl_type: simclr
 
 num_epochs: 5
 lr: 0.001
-trainset: smartphone
+trainset: coco
 batch_size: 16
 dataloader_num_worker: 16
+input_size: 640
