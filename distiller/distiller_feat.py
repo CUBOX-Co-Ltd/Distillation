@@ -172,6 +172,7 @@ class FeatuerDistiller(BaseDistiller):
     def init_model(self, teacher, student):
         self.teacher = teacher
         self.student = Student_with_Proejctor(teacher, student)
+        self.feat_criterion = CWDLoss(self.cfg.tau)
 
     def set_model_requires_grad(self, ):
         self.teacher.requires_grad_(False)
@@ -182,6 +183,17 @@ class FeatuerDistiller(BaseDistiller):
                 param.requires_grad = True
         else:
             pass
+
+    # def register_hook(self,):
+    #     self.remove_handle_()
+
+    #     self.teacher_feats = []
+    #     self.student_feats = []
+
+    #     def make_student_hook(l):
+    #         def foward_hook(m, i, o):
+    #             if isinstance(o, torch.Tensor):
+    #                 pass
 
 
     def init_optimizer(self, ):
@@ -253,7 +265,13 @@ class FeatuerDistiller(BaseDistiller):
             teacher_output = self.teacher.model._predict_once(batch["img"])
 
             teacher_feats = self.teacher.model.extracted_features
-        # loss = 
+
+        feat_loss = self.feat_criterion(teacher_feats, student_feats)
+        response_loss = self.response_criterion(teacher_output, student_output)
+        gt_loss = self.student.model.criterion(student_output, batch) # 원본 loss
+
+        total_loss = self.cfg.gt_coeff * gt_loss + self.cfg.response_coeff * self.response_loss + self.cfg.feat_coeff * feat_loss
+        return total_loss
 
     def train(self,):
         for epoch in range(self.config.num_epochs):
@@ -268,3 +286,7 @@ class FeatuerDistiller(BaseDistiller):
                 self.optimizer.zero_grad()
                 self.fabric.backward(loss, model=self.student)
                 self.optimizer.step()
+
+                total_loss += loss.item()
+
+        self.fabric.print(f"Epoch {epoch + 1} - Loss: {total_loss / len(train_loader)}")

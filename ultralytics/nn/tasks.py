@@ -474,11 +474,13 @@ class DetectionModel2(BaseModel):
         for m_idx,m in enumerate(self.model):
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
-            if profile:
-                self._profile_one_layer(m, x, dt)
             x = m(x)  # run
             if isinstance(x, tuple):
                 print(m_idx, type(m))
+            elif x is None:
+                print(m_idx, 'None')
+            elif isinstance(x, list):
+                pass
             else:
                 print(m_idx, type(m), x.shape)
             # Save intermediate features if the layer matches the feature_layers criteria
@@ -490,14 +492,13 @@ class DetectionModel2(BaseModel):
             #     if class_counts[layer_class] in target_indices:
             #         self.extracted_features[(layer_class, class_counts[layer_class])] = x
 
-
-            # y.append(x if m.i in self.save else None)  # save output
-            # if visualize:
-            #     feature_visualization(x, m.type, m.i, save_dir=visualize)
-            # if embed and m.i in embed:
-            #     embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
-            #     if m.i == max(embed):
-            #         return torch.unbind(torch.cat(embeddings, 1), dim=0)
+            y.append(x if m.i in self.save else None)  # save output
+            if visualize:
+                feature_visualization(x, m.type, m.i, save_dir=visualize)
+            if embed and m.i in embed:
+                embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
+                if m.i == max(embed):
+                    return torch.unbind(torch.cat(embeddings, 1), dim=0)
                 
         return x
 
@@ -1256,6 +1257,7 @@ def parse_model_seperate(d, ch, verbose=True):  # model_dict, input_channels(3)
         LOGGER.info(f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
     ch = [ch]
     layers_backbone, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
+    start_idx = 0
     for i, (f, n, m, args) in enumerate(d["backbone"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]  # get module
         for j, a in enumerate(args):
@@ -1373,8 +1375,9 @@ def parse_model_seperate(d, ch, verbose=True):  # model_dict, input_channels(3)
             ch = []
         ch.append(c2)
 
+    start_idx = i + 1
     layers_head = []
-    for i, (f, n, m, args) in enumerate(d["head"]):  # from, number, module, args
+    for i, (f, n, m, args) in enumerate(d["head"], start=start_idx):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]  # get module
         for j, a in enumerate(args):
             if isinstance(a, str):
