@@ -24,5 +24,7 @@ unset RANK
 unset LOCAL_RANK
 
 pip install torchinfo
+pip uninstall ultralytics -y
+pip list
 python just_yolo.py
 # python down_coco.py

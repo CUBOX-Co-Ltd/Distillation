@@ -1,0 +1,4 @@
+lightly
+torchinfo
+lightning
+wandb

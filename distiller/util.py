@@ -14,6 +14,7 @@ def preprocess_batch(batch, device, precision):
 
 def get_yolo_model(model_version, task="detect"):
     model = YOLO(model_version, task=task, verbose=True)
+    model.model.args = model.args
     return model
 
 def get_yolo_models(
@@ -27,5 +28,8 @@ def get_yolo_models(
     
     teacher = YOLO(teacher_version, task=task).eval()
     student = YOLO(student_version, task=task)
+
+    teacher.model.args = teacher.args
+    student.model.args = student.args
 
     return teacher, student

@@ -28,6 +28,7 @@ class LogitDistiler(BaseDistiller):
         self.teacher = teacher
         self.student = student
 
+        print('loss type', type(self.teacher.model.criterion))
         # 파라미터 확인
         # print("Parameters in YOLO object:", list(self.student.parameters()))
         # print("Parameters in YOLO.model:", list(self.student.model.parameters()))
@@ -132,39 +133,26 @@ class LogitDistiler(BaseDistiller):
         """
 
         batch = preprocess_batch(batch, self.device, self.weight_dtype)
-
-        student_output = self.student.model._predict_once(batch["img"])
-
-        # print("Student output analysis:")
-        # for idx, elem in enumerate(student_output):
-        #     if isinstance(elem, torch.Tensor):
-        #         print(f"Element {idx}: Tensor with shape {elem.shape}")
-        #     elif isinstance(elem, list):
-        #         print(f"Element {idx}: List with length {len(elem)}")
-        #         for i, item in enumerate(elem):
-        #             if isinstance(item, torch.Tensor):
-        #                 print(f"  List Item {i}: Tensor with shape {item.shape}")
-        #             else:
-        #                 print(f"  List Item {i}: {item} (type: {type(item)})")
-        #     else:
-        #         print(f"Element {idx}: {type(elem)}")
-
-
-        # print('loss', type(loss))
-        # print('loss_itesm', loss_item.keys())
-        # print('student_output', type(student_output))
-        # print('student_output', student_output)
-
+        
+        # Forward pass
+        student_preds = self.student.model(batch['img'])
         with torch.no_grad():
-            # loss_t, loss_items_t  = self.teacher(batch)
-            teacher_output = self.teacher.model._predict_once(batch["img"])
+            self.teacher.eva()
+            teacher_preds = self.teacher.model(batch['img'])
+        
+        # Loss
+        response_loss = self.response_criterion(teacher_preds, student_preds)
+        gt_loss = self.student.model.criterion(student_preds, batch)
 
-        loss = self.distil_loss(student_output, teacher_output)
-
-        return loss
+        # student_output = self.student.model._predict_once(batch["img"])
+        # with torch.no_grad():
+        #     loss_t, loss_items_t  = self.teacher(batch)
+        #     teacher_output = self.teacher.model._predict_once(batch["img"])
+        total_loss = self.cfg.gt_coeff * gt_loss + self.cfg.response_coeff * self.response_loss
+        return total_loss
 
     def train(self,):
-        for epoch in range(10):
+        for epoch in range(self.config.num_epochs):
             self.fabric.print(f"Epoch {epoch + 1}")
             total_loss = 0
 

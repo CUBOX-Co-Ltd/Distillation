@@ -34,6 +34,8 @@ class Config(BaseModel):
     distillation_loss_type: str
     temperature: float
     alpha: float
+    gt_coeff: float
+    response_coeff: float
 
     train_all_params: bool
 

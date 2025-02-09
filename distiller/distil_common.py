@@ -45,8 +45,8 @@ class BaseDistiller:
         print('trainloader', type(trainloader))
         self.trainloader = self.fabric.setup_dataloaders(trainloader)
 
-    def init_model_and_optimizer(self, ):
-        self.init_model()
+    def init_model_and_optimizer(self, teacher, student):
+        self.init_model(teacher, student)
         self.set_model_requires_grad()
         self.init_optimizer()
         self.fabric_setup()

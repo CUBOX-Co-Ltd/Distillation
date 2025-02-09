@@ -2,6 +2,17 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+class LogitDistillationLoss(nn.Module):
+    def __init__(self, temperature=3.0):
+        super().__init__()
+        self.temperature = temperature
+        
+    def forward(self, student_logits, teacher_logits):
+        teacher_probs = F.softmax(teacher_logits / self.temperature, dim=-1)
+        student_log_probs = F.log_softmax(student_logits / self.temperature, dim=-1)
+        kl_loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
+        return kl_loss * (self.temperature ** 2)
+
 class BasicDistillationLoss(nn.Module):
     """
     Logit distillation + Feature distillation

@@ -7,8 +7,8 @@ pl_strategy: deepspeed_stage_3_offload
 pl_precision: bf16-mixed
 
 
-teacher_model: yolo11x
-student_model: yolo11n
+teacher_model: /purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/models/11/yolo11x.yaml
+student_model: /purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/models/11/yolo11n.yaml
 
 num_epochs: 100
 student_lr: 0.001
@@ -20,5 +20,8 @@ dataloader_num_worker: 16
 distillation_loss_type: basic
 temperature: 3.0
 alpha: 0.5
+gt_coeff: 1.0
+response_coeff: 1.0
 
 train_all_params: true
+projector_type: none

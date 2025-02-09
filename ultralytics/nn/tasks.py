@@ -349,6 +349,10 @@ class DetectionModel(BaseModel):
             self.info()
             LOGGER.info("")
 
+
+        print('creterion init')
+        self.criterion = self.init_criterion()
+
     def _predict_augment(self, x):
         """Perform augmentations on input image x and return augmented inference and train outputs."""
         if getattr(self, "end2end", False) or self.__class__.__name__ != "DetectionModel":
@@ -452,6 +456,9 @@ class DetectionModel2(BaseModel):
 
         self.extracted_features = {} # To store features from specified layers
 
+        print('creterion init')
+        self.criterion = self.init_criterion()
+            
     def __repr__(self):
         return f"DetectionModel2(\n  (model): {self.model.__repr__()}\n)"
 

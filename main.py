@@ -72,7 +72,7 @@ if __name__ == '__main__':
     elif config.trainset == 'coco':
         from ultralytics.data.dataset import YOLODataset
         data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/datasets/coco.yaml'
-        data = check_det_dataset(data_yaml) 
+        # data = check_det_dataset(data_yaml) 
         trainset = YOLODataset(
             data["train"],
             data=data,
@@ -90,11 +90,11 @@ if __name__ == '__main__':
         # distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
         # distiler.train()
 
-        teacher = get_yolo_model('/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/models/11/yolo11n.yaml')
-        print(type(teacher.model)) # ultralytics.nn.tasks.DetectionModel
-        print(teacher.model)
-        print(teacher.task_map)
-        torch.randn(1, 3, 640, 640)
+        # teacher = get_yolo_model('/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/models/11/yolo11n.yaml')
+        # print(type(teacher.model)) # ultralytics.nn.tasks.DetectionModel
+        # print(teacher.model)
+        # print(teacher.task_map)
+        # torch.randn(1, 3, 640, 640)
 
         teacher, student = get_yolo_models(config.teacher_model, config.student_model)
         from distiller import LogitDistiler

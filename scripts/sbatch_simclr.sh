@@ -12,7 +12,8 @@
 #SBATCH --cpus-per-task=16
 #SBATCH -o ./logs/output_%A_%a.txt
 
-export CONTAINER_IMAGE_PATH='/purestorage/project/tyk/0_Software/yolo_distil.sqsh'
+export CONTAINER_IMAGE_PATH='/purestorage/project/tyk/0_Software/autodistill3.sqsh'
+# export CONTAINER_IMAGE_PATH='/purestorage/project/tyk/0_Software/yolo_distil.sqsh'
 export CACHE_FOL_PATH='/purestorage/project/tyk/0_Software/cache'
 export MY_WORKSPACE_PATH='/purestorage/project/tyk/3_CUProjects/Distillation'
 
@@ -21,4 +22,4 @@ srun --container-image $CONTAINER_IMAGE_PATH \
     --no-container-mount-home \
     --container-writable \
     --container-workdir $MY_WORKSPACE_PATH \
-    bash -c 'pip install lightly && python main.py --nnodes $SLURM_NNODES --ngpus $SLURM_NTASKS_PER_NODE --mode ssl_simclr_yolo11 --config_path configs/yolo_ssl_simclr.yaml'
+    bash -c 'pip install lightly && python main.py --nnodes $SLURM_NNODES --ngpus $SLURM_NTASKS_PER_NODE --mode distil_logit_yolo11 --config_path configs/yolo_logit_distil.yaml'
