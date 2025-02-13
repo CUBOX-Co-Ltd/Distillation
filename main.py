@@ -72,32 +72,21 @@ if __name__ == '__main__':
     elif config.trainset == 'coco':
         from ultralytics.data.dataset import YOLODataset
         data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/datasets/coco.yaml'
-        # data = check_det_dataset(data_yaml) 
+        data = check_det_dataset(data_yaml) 
         trainset = YOLODataset(
             data["train"],
             data=data,
             task="detect",
             imgsz=640,
             augment=False,
-            batch_size=1,)
+            batch_size=config.batch_size,)
 
     else:
         trainset = None
 
     if args.mode == 'distil_logit_yolo11':
-        # from distiler import YOLO11Distiler
-        # teacher, student = get_yolo_models(f'{config.teacher_model}.pt', f'{config.student_model}.pt')
-        # distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
-        # distiler.train()
-
-        # teacher = get_yolo_model('/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/models/11/yolo11n.yaml')
-        # print(type(teacher.model)) # ultralytics.nn.tasks.DetectionModel
-        # print(teacher.model)
-        # print(teacher.task_map)
-        # torch.randn(1, 3, 640, 640)
-
-        teacher, student = get_yolo_models(config.teacher_model, config.student_model)
         from distiller import LogitDistiler
+        teacher, student = get_yolo_models(config.teacher_model, config.student_model)
 
         distiler = LogitDistiler(
             fabric=fabric, 
@@ -130,3 +119,13 @@ if __name__ == '__main__':
         ssl_trainer.train()
 
     
+    # from distiler import YOLO11Distiler
+    # teacher, student = get_yolo_models(f'{config.teacher_model}.pt', f'{config.student_model}.pt')
+    # distiler = YOLO11Distiler(fabric=fabric, config=config, trainset=trainset)
+    # distiler.train()
+
+    # teacher = get_yolo_model('/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/models/11/yolo11n.yaml')
+    # print(type(teacher.model)) # ultralytics.nn.tasks.DetectionModel
+    # print(teacher.model)
+    # print(teacher.task_map)
+    # torch.randn(1, 3, 640, 640)

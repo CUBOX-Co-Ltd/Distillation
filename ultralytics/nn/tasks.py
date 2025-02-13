@@ -350,8 +350,8 @@ class DetectionModel(BaseModel):
             LOGGER.info("")
 
 
-        print('creterion init')
-        self.criterion = self.init_criterion()
+        # print('creterion init')
+        # self.criterion = self.init_criterion()
 
     def _predict_augment(self, x):
         """Perform augmentations on input image x and return augmented inference and train outputs."""
@@ -455,9 +455,6 @@ class DetectionModel2(BaseModel):
             LOGGER.info("")
 
         self.extracted_features = {} # To store features from specified layers
-
-        print('creterion init')
-        self.criterion = self.init_criterion()
             
     def __repr__(self):
         return f"DetectionModel2(\n  (model): {self.model.__repr__()}\n)"
@@ -475,12 +472,13 @@ class DetectionModel2(BaseModel):
         Returns:
             (torch.Tensor): The last output of the model.
         """
-        print('459', x.shape)
         y, dt, embeddings = [], [], []  # outputs
         class_counts = {}  # To track the occurrence of each layer class
         for m_idx,m in enumerate(self.model):
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+            if profile:
+                self._profile_one_layer(m, x, dt)
             x = m(x)  # run
             if isinstance(x, tuple):
                 print(m_idx, type(m))

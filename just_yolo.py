@@ -7,10 +7,24 @@ from torchinfo import summary
 # Load a model
 model = YOLO("yolo11n.pt")
 
-print('model.stride', model.stride)
-print('model.taskmap', model.task_map)
-print('model type', type(model.model))
-print(type(model.model.criterion))
+# print('model.stride', model.stride)
+# print('model.taskmap', model.task_map)
+# print('model type', type(model.model))
+# print(type(model.model.criterion))
+
+
+# from ultralytics.data.dataset import YOLODataset
+# data_yaml = '/purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cfg/datasets/coco.yaml'
+# # data = check_det_dataset(data_yaml) 
+# trainset = YOLODataset(
+#     data["train"],
+#     data=data,
+#     task="detect",
+#     imgsz=640,
+#     augment=False,
+#     batch_size=1,)
+
+model.export(format="onnx")
 
 # model_stats = summary(model.eval(), (1,3,640,640), verbose=0)
 # print(str(model_stats))

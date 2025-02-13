@@ -13,11 +13,11 @@ student_model: /purestorage/project/tyk/3_CUProjects/Distillation/ultralytics/cf
 num_epochs: 100
 student_lr: 0.001
 student_lr_scheduler: ExponentialLR
-trainset: smartphone
+trainset: coco
 batch_size: 16
 dataloader_num_worker: 16
 
-distillation_loss_type: basic
+distillation_loss_type: logit
 temperature: 3.0
 alpha: 0.5
 gt_coeff: 1.0

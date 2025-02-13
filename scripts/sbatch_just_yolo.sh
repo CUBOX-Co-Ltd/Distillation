@@ -1,8 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=ultralytics
-#SBATCH --partition=all
-#SBATCH --nodelist=nv174
+#SBATCH --partition=80g
 #SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=4G
 #SBATCH --gpus=1
@@ -26,5 +25,5 @@ unset LOCAL_RANK
 pip install torchinfo
 pip uninstall ultralytics -y
 pip list
-python just_yolo.py
+python just_yolo2.py
 # python down_coco.py

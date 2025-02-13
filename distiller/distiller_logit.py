@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from .distil_common import BaseDistiller
 from .util import preprocess_batch
-from .loss import BasicDistillationLoss
+from .loss import BasicDistillationLoss, LogitDistillationLoss
 
 
 class LogitDistiler(BaseDistiller):
@@ -28,7 +28,9 @@ class LogitDistiler(BaseDistiller):
         self.teacher = teacher
         self.student = student
 
-        print('loss type', type(self.teacher.model.criterion))
+        print('t args', self.teacher.model.args)
+        print('s args', self.student.model.args)
+        # print('loss type', type(self.teacher.model.criterion))
         # 파라미터 확인
         # print("Parameters in YOLO object:", list(self.student.parameters()))
         # print("Parameters in YOLO.model:", list(self.student.model.parameters()))
@@ -36,14 +38,16 @@ class LogitDistiler(BaseDistiller):
         #     print(f"{name}: requires_grad={param.requires_grad}")
         self.discriminator = None
 
-        if self.cfg.distillation_loss_type:
+        if self.cfg.distillation_loss_type == 'basic':
             self.distil_loss = BasicDistillationLoss(self.cfg.temperature, self.cfg.alpha)
+        elif self.cfg.distillation_loss_type == 'logit':
+            self.response_criterion = LogitDistillationLoss(self.cfg.temperature)
         else:
             pass
 
     def set_model_requires_grad(self, ):
         self.teacher.requires_grad_(False)
-        self.teacher.eval()
+        # self.teacher.eval()
 
         if self.cfg.train_all_params:
             for param in self.student.parameters():
@@ -135,24 +139,27 @@ class LogitDistiler(BaseDistiller):
         batch = preprocess_batch(batch, self.device, self.weight_dtype)
         
         # Forward pass
-        student_preds = self.student.model(batch['img'])
+        # student_preds = self.student.model(batch['img'])
+        # with torch.no_grad():
+        #     # self.teacher.model.eval()
+        #     teacher_preds = self.teacher.model(batch['img'])
+
+
+        student_preds = self.student.model._predict_once(batch["img"])
         with torch.no_grad():
-            self.teacher.eva()
-            teacher_preds = self.teacher.model(batch['img'])
-        
+            teacher_preds = self.teacher.model._predict_once(batch["img"])
+
+        print(student_preds[0].shape, student_preds[1].shape, student_preds[2].shape)
+        print(teacher_preds[0].shape, teacher_preds[1].shape, teacher_preds[2].shape)
         # Loss
         response_loss = self.response_criterion(teacher_preds, student_preds)
         gt_loss = self.student.model.criterion(student_preds, batch)
 
-        # student_output = self.student.model._predict_once(batch["img"])
-        # with torch.no_grad():
-        #     loss_t, loss_items_t  = self.teacher(batch)
-        #     teacher_output = self.teacher.model._predict_once(batch["img"])
         total_loss = self.cfg.gt_coeff * gt_loss + self.cfg.response_coeff * self.response_loss
         return total_loss
 
     def train(self,):
-        for epoch in range(self.config.num_epochs):
+        for epoch in range(self.cfg.num_epochs):
             self.fabric.print(f"Epoch {epoch + 1}")
             total_loss = 0
 

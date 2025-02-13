@@ -7,7 +7,16 @@ class LogitDistillationLoss(nn.Module):
         super().__init__()
         self.temperature = temperature
         
-    def forward(self, student_logits, teacher_logits):
+    def forward(self, teacher_logits, student_logits):
+        print(len(student_logits), len(teacher_logits)) # 3, 2
+        # print('teacher_logits_1', teacher_logits[0].shape)
+
+        student_logits = student_logits[0] # [16, 84, 8400]
+        teacher_logits = teacher_logits[0] # [16, 144, 80, 80])
+
+        print('shape', student_logits.shape, teacher_logits.shape)
+        print('teacher_logits', teacher_logits[1].shape) # ([84, 8400])
+        print('teacher_logits', teacher_logits[2].shape) # 
         teacher_probs = F.softmax(teacher_logits / self.temperature, dim=-1)
         student_log_probs = F.log_softmax(student_logits / self.temperature, dim=-1)
         kl_loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
