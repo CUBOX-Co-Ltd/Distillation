@@ -476,7 +476,10 @@ class DetectionModel2(BaseModel):
         class_counts = {}  # To track the occurrence of each layer class
         for m_idx,m in enumerate(self.model):
             if m.f != -1:  # if not from previous layer
-                x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+                if isinstance(m.f, int):
+                    x = y[m.f] 
+                else:
+                    x = [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             x = m(x)  # run
